@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>منظم المصروف</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1411;--card:#171f1b;--tx:#e8efea;--mut:#92a199;--pri:#4cc79b;--pri2:#1f3329;--bd:#27342d;--warn:#ff7b6b;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Tajawal,system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;line-height:1.6}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}
+h2{font-size:17px;margin:0 0 10px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{flex:1;padding:10px 4px;border:1px solid var(--bd);background:var(--card);color:var(--mut);border-radius:12px;font:inherit;font-weight:500;cursor:pointer}
+.tabs button.on{background:var(--pri);color:#0e1411;border-color:var(--pri);font-weight:700}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.btn{width:100%;margin-top:10px;padding:12px;border:0;border-radius:12px;background:var(--pri);color:#0e1411;font:inherit;font-weight:700;cursor:pointer}
+.stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--bd)}
+.stat:last-child{border:0}
+.big{font-size:26px;font-weight:700}
+.bar{height:10px;background:var(--pri2);border-radius:8px;overflow:hidden;margin:4px 0 2px}
+.bar i{display:block;height:100%;background:var(--pri)}
+.bar i.over{background:var(--warn)}
+.sm{font-size:13px;color:var(--mut)}
+.item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)}
+.item:last-child{border:0}
+.x{background:none;border:0;color:var(--warn);font-size:18px;cursor:pointer}
+ul{padding-inline-start:20px;margin:6px 0}
+li{margin:4px 0}
+.tag{display:inline-block;background:var(--pri2);color:var(--pri);border-radius:8px;padding:1px 8px;font-size:12px}
+.win{color:var(--pri);font-weight:700}
+.hide{display:none}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mini{background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:10px;text-align:center}
+.mini span{display:block;font-size:12px;color:var(--mut)}
+.mini b{font-size:17px}
+.card h2{padding-bottom:8px;border-bottom:1px solid var(--bd)}
+input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
+</style>
+</head>
+<body>
+<main>
+<h1>💰 منظم المصروف</h1>
+<div class="tabs">
+  <button class="on" data-t="a">المصروف</button>
+  <button data-t="b">التحويل</button>
+  <button data-t="c">قارن</button>
+</div>
+
+<section id="a">
+  <div class="card">
+    <label>دخلك الشهري</label>
+    <input id="inc" type="number" inputmode="decimal" placeholder="مثال: 5000">
+    <div class="grid" style="margin:12px 0 8px"><div class="mini"><span>الدخل</span><b id="s1">0</b></div><div class="mini"><span>المصروف</span><b id="s2">0</b></div><div class="mini"><span>المتبقي</span><b id="left">0</b></div></div>
+    <div class="bar"><i id="pb" style="width:0"></i></div>
+    <div class="sm" id="pt"></div>
+  </div>
+  <div class="card">
+    <h2>إضافة مصروف</h2>
+    <input id="nm" placeholder="الوصف (مثال: إيجار)">
+    <div class="row">
+      <div><label>المبلغ</label><input id="am" type="number" inputmode="decimal"></div>
+      <div><label>النوع</label>
+        <select id="ct"><option value="n">أساسي (إيجار، فواتير، أكل)</option><option value="w">كماليات (ترفيه، تسوق)</option><option value="s">ادخار وديون</option></select>
+      </div>
+    </div>
+    <button class="btn" id="add">إضافة</button>
+  </div>
+  <div class="card">
+    <h2>توزيع مقترح (50/30/20)</h2>
+    <div id="rule"></div>
+  </div>
+  <div class="card"><h2>مصاريفك</h2><div id="list"><div class="sm">ما فيه مصاريف بعد.</div></div></div>
+</section>
+
+<section id="b" class="hide">
+  <div class="card">
+    <h2>كيف تحوّل فلوس؟</h2>
+    <p><span class="tag">داخل نفس البلد</span></p>
+    <ul><li>من تطبيق البنك أو التحويل الفوري المحلي، وغالباً أرخص وأسرع طريقة.</li><li>تأكد من رقم الآيبان واسم المستفيد قبل التأكيد.</li></ul>
+    <p><span class="tag">خارج البلد</span></p>
+    <ul><li>قارن بين: تطبيق البنك، شركات الصرافة المرخصة، وتطبيقات التحويل.</li><li>لا تنظر للرسوم فقط، سعر الصرف يفرق أكثر.</li><li>تأكد أن الجهة مرخصة من البنك المركزي في بلدك.</li></ul>
+  </div>
+  <div class="card">
+    <h2>وش تقارن في أي بنك؟</h2>
+    <ul><li>رسوم التحويل (ثابتة أو نسبة).</li><li>سعر الصرف مقابل السعر الفعلي في السوق.</li><li>مدة وصول الفلوس.</li><li>الحد الأعلى للتحويل اليومي.</li><li>رسوم الحساب الشهرية والبطاقة.</li></ul>
+    <p class="sm">أسعار وشروط البنوك تتغير، فتأكد من موقع البنك أو تطبيقه قبل التحويل. وأنا مو مستشار مالي.</p>
+  </div>
+  <div class="card">
+    <h2>أفضل طرق الصرف</h2>
+    <ul><li>سجّل كل مصروف، حتى الصغير.</li><li>خذ الادخار أول الشهر قبل ما تصرف.</li><li>جهّز صندوق طوارئ يغطي 3 إلى 6 شهور.</li><li>سدّد الديون ذات الفائدة العالية أولاً.</li><li>انتظر 24 ساعة قبل أي شراء كبير غير ضروري.</li><li>راجع الاشتراكات الشهرية وألغِ اللي ما تستخدمه.</li></ul>
+  </div>
+</section>
+
+<section id="c" class="hide">
+  <div class="card">
+    <h2>قارن بين خيارين للتحويل</h2>
+    <label>المبلغ</label><input id="ta" type="number" inputmode="decimal" placeholder="1000">
+    <div class="row">
+      <div><label>الخيار 1: الرسوم</label><input id="f1" type="number" inputmode="decimal" placeholder="10"></div>
+      <div><label>سعر الصرف 1</label><input id="r1" type="number" inputmode="decimal" step="any" placeholder="3.75"></div>
+    </div>
+    <div class="row">
+      <div><label>الخيار 2: الرسوم</label><input id="f2" type="number" inputmode="decimal" placeholder="0"></div>
+      <div><label>سعر الصرف 2</label><input id="r2" type="number" inputmode="decimal" step="any" placeholder="3.70"></div>
+    </div>
+    <div id="cmp" class="sm" style="margin-top:12px">عبّي الأرقام ونعرف أي خيار يوصّل لك أكثر.</div>
+  </div>
+</section>
+</main>
+<script>
+var S={inc:0,items:[]};
+function load(){try{var v=localStorage.getItem("masrouf");if(v)S=JSON.parse(v)}catch(e){}}
+function save(){try{localStorage.setItem("masrouf",JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function f(n){return Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2})}
+var N={n:"أساسي",w:"كماليات",s:"ادخار وديون"};
+function render(){
+  var t={n:0,w:0,s:0},sum=0;
+  S.items.forEach(function(x){t[x.c]+=x.a;sum+=x.a});
+  var left=S.inc-sum;
+  $("left").textContent=f(left);$("s1").textContent=f(S.inc);$("s2").textContent=f(sum);
+  $("left").style.color=left<0?"var(--warn)":"inherit";
+  var p=S.inc>0?Math.min(100,sum/S.inc*100):0;
+  $("pb").style.width=p+"%";$("pb").className=sum>S.inc&&S.inc>0?"over":"";
+  $("pt").textContent=S.inc>0?"صرفت "+f(sum)+" من "+f(S.inc)+" ("+Math.round(sum/S.inc*100)+"٪)":"";
+  var g={n:.5,w:.3,s:.2},h="";
+  ["n","w","s"].forEach(function(k){
+    var tg=S.inc*g[k],pc=tg>0?Math.min(100,t[k]/tg*100):0;
+    h+='<div class="stat"><span>'+N[k]+'</span><span class="sm">'+f(t[k])+" / "+f(tg)+'</span></div><div class="bar"><i class="'+(tg>0&&t[k]>tg&&k!=="s"?"over":"")+'" style="width:'+pc+'%"></i></div>';
+  });
+  $("rule").innerHTML=h;
+  var l="";
+  S.items.forEach(function(x,i){l+='<div class="item"><div>'+esc(x.n)+' <span class="tag">'+N[x.c]+'</span></div><div><b>'+f(x.a)+'</b> <button class="x" data-i="'+i+'" aria-label="حذف">×</button></div></div>'});
+  $("list").innerHTML=l||'<div class="sm">ما فيه مصاريف بعد.</div>';
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+$("inc").oninput=function(){S.inc=parseFloat(this.value)||0;save();render()};
+$("add").onclick=function(){
+  var a=parseFloat($("am").value);if(!a||a<=0)return;
+  S.items.unshift({n:$("nm").value.trim()||"مصروف",a:a,c:$("ct").value});
+  $("nm").value="";$("am").value="";save();render();
+};
+$("list").onclick=function(e){var i=e.target.getAttribute("data-i");if(i!==null){S.items.splice(+i,1);save();render()}};
+document.querySelector(".tabs").onclick=function(e){
+  var t=e.target.getAttribute("data-t");if(!t)return;
+  ["a","b","c"].forEach(function(k){$(k).classList.toggle("hide",k!==t)});
+  document.querySelectorAll(".tabs button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-t")===t)});
+};
+function cmp(){
+  var a=parseFloat($("ta").value),f1=parseFloat($("f1").value)||0,f2=parseFloat($("f2").value)||0,r1=parseFloat($("r1").value),r2=parseFloat($("r2").value);
+  if(!a||!r1||!r2)return;
+  var o1=(a-f1)*r1,o2=(a-f2)*r2,d=Math.abs(o1-o2),w=o1===o2?0:(o1>o2?1:2);
+  $("cmp").innerHTML="الخيار 1 يوصّل: <b>"+f(o1)+"</b><br>الخيار 2 يوصّل: <b>"+f(o2)+"</b><br>"+(w?'<span class="win">الخيار '+w+" أفضل بفرق "+f(d)+"</span>":"النتيجة متساوية");
+}
+["ta","f1","f2","r1","r2"].forEach(function(i){$(i).oninput=cmp});
+load();$("inc").value=S.inc||"";render();
+</script>
+</body>
+</html>
