@@ -79,10 +79,8 @@ input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
   </div>
   <div class="card"><h2>مصاريفك</h2><div id="list"><div class="sm">ما فيه مصاريف بعد.</div></div></div>
   <div class="card">
-    <h2>مشاركة</h2>
-    <button class="btn" id="shS">📤 مشاركة ملخص المصروف</button>
-    <button class="btn" id="shL" style="background:var(--pri2);color:var(--pri)">🔗 مشاركة رابط المنظم</button>
-    <div class="sm" id="shM" style="margin-top:8px"></div>
+    <button class="btn" id="shL" style="margin-top:0">شارك</button>
+    <div class="sm" id="shM" style="margin-top:8px;text-align:center"></div>
   </div>
 </section>
 
@@ -177,21 +175,11 @@ function cp(s){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(function(){$("shM").textContent="تم النسخ، الصقه في أي محادثة ✅"},function(){fb(s)})}else fb(s);
 }
 function share(text,url){
-  var d={title:"منظم المصروف"};if(text)d.text=text;if(url)d.url=url;
-  if(navigator.share){navigator.share(d).catch(function(e){if(!e||e.name!=="AbortError")cp(text||url)});return}
-  cp(text||url);
+  if(navigator.share){navigator.share({title:"منظم المصروف",url:url}).catch(function(e){if(!e||e.name!=="AbortError")cp(url)});return}
+  cp(url);
 }
-function summary(){
-  var t={n:0,w:0,s:0},sum=0;
-  S.items.forEach(function(x){t[x.c]+=x.a;sum+=x.a});
-  var s="💰 ملخص مصروفي\n";
-  s+="الدخل: "+f(S.inc)+"\nالمصروف: "+f(sum)+"\nالمتبقي: "+f(S.inc-sum)+"\n\n";
-  s+="أساسي: "+f(t.n)+"\nكماليات: "+f(t.w)+"\nادخار وديون: "+f(t.s);
-  if(S.items.length){s+="\n\nالتفاصيل:\n";S.items.forEach(function(x){s+="• "+x.n+": "+f(x.a)+"\n"})}
-  return s.trim();
-}
-$("shS").onclick=function(){if(!S.items.length&&!S.inc){$("shM").textContent="أضف دخلك ومصاريفك أولاً";return}$("shM").textContent="";share(summary())};
-$("shL").onclick=function(){$("shM").textContent="";var u=location.href.split("#")[0];share("جرب منظم المصروف",u)};
+var LINK="https://alashth4-a11y.github.io/Code/";
+$("shL").onclick=function(){$("shM").textContent="";share("",LINK)};
 load();$("inc").value=S.inc||"";render();
 </script>
 </body>
