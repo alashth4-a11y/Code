@@ -179,7 +179,13 @@ function share(text,url){
   cp(url);
 }
 var LINK="https://alashth4-a11y.github.io/Code/";
-$("shL").onclick=function(){$("shM").textContent="";share("",LINK)};
+$("shL").onclick=function(){
+  $("shM").textContent="";
+  var u=LINK,own=false;
+  try{own=window.top===window&&/^https?:/.test(location.href)&&location.hostname!=="localhost"}catch(e){}
+  if(own)u=location.href.split("#")[0];
+  share("",u);
+};
 load();$("inc").value=S.inc||"";render();
 </script>
 </body>
