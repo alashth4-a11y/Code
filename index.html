@@ -43,6 +43,7 @@ li{margin:4px 0}
 .mini b{font-size:17px}
 .card h2{padding-bottom:8px;border-bottom:1px solid var(--bd)}
 input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
+details.card summary{font-weight:700;cursor:pointer}details.card[open] summary{margin-bottom:8px}textarea:focus{outline:2px solid var(--pri)}
 </style>
 </head>
 <body>
@@ -56,6 +57,7 @@ input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
 
 <section id="a">
   <div class="card">
+    <div class="row"><div><label>الشهر</label><select id="mo"></select></div><div><label>العملة</label><select id="cur"></select></div></div>
     <label>دخلك الشهري</label>
     <input id="inc" type="number" inputmode="decimal" placeholder="مثال: 5000">
     <div class="grid" style="margin:12px 0 8px"><div class="mini"><span>الدخل</span><b id="s1">0</b></div><div class="mini"><span>المصروف</span><b id="s2">0</b></div><div class="mini"><span>المتبقي</span><b id="left">0</b></div></div>
@@ -64,20 +66,33 @@ input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
   </div>
   <div class="card">
     <h2>إضافة مصروف</h2>
-    <input id="nm" placeholder="الوصف (مثال: إيجار)">
+    <input id="nm" placeholder="الوصف (مثال: إيجار)"><div id="qk" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
     <div class="row">
       <div><label>المبلغ</label><input id="am" type="number" inputmode="decimal"></div>
-      <div><label>النوع</label>
-        <select id="ct"><option value="n">أساسي (إيجار، فواتير، أكل)</option><option value="w">كماليات (ترفيه، تسوق)</option><option value="s">ادخار وديون</option></select>
-      </div>
+      <div><label>القسم</label><select id="ct"></select></div>
     </div>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--tx)"><input id="fx" type="checkbox" style="width:auto"> يتكرر كل شهر (إيجار، اشتراك)</label>
     <button class="btn" id="add">إضافة</button>
   </div>
   <div class="card">
     <h2>خطتك العملية للشهر</h2>
     <div id="rule"></div>
   </div>
-  <div class="card"><h2>مصاريفك</h2><div id="list"><div class="sm">ما فيه مصاريف بعد.</div></div></div>
+  <div class="card"><h2>أين تذهب فلوسك؟</h2><div id="cats"></div></div>
+  <div class="card"><h2>مصاريفك</h2><div id="list"></div></div>
+  <details class="card"><summary>🎯 هدف ادخار</summary>
+    <label>اسم الهدف</label><input id="gn" placeholder="سيارة، سفر...">
+    <div class="row"><div><label>المبلغ المطلوب</label><input id="ga" type="number" inputmode="decimal"></div><div><label>المدخر حتى الآن</label><input id="gs" type="number" inputmode="decimal"></div></div>
+    <label>التاريخ المستهدف</label><input id="gd" type="date">
+    <div id="gr" style="margin-top:10px"></div>
+  </details>
+  <details class="card"><summary>📅 الأشهر السابقة</summary><div id="hist" style="margin-top:8px"></div></details>
+  <details class="card"><summary>💾 نسخة احتياطية</summary>
+    <p class="sm">بياناتك على جهازك فقط. صدّرها واحفظها في ملاحظاتك، أو الصق نسخة قديمة واستوردها. ولتثبيت المنظم كتطبيق: من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية».</p>
+    <textarea id="bk" rows="4" style="width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit"></textarea>
+    <div class="row"><button class="btn" id="ex">تصدير ونسخ</button><button class="btn" id="im">استيراد</button></div>
+    <div class="sm" id="bm" style="margin-top:6px"></div>
+  </details>
   <div class="card">
     <button class="btn" id="shL" style="margin-top:0">شارك</button>
     <div class="sm" id="shM" style="margin-top:8px;text-align:center"></div>
@@ -128,39 +143,104 @@ input:focus,select:focus{outline:2px solid var(--pri);outline-offset:0}
 </section>
 </main>
 <script>
-var S={inc:0,items:[]};
-function load(){try{var v=localStorage.getItem("masrouf");if(v)S=JSON.parse(v)}catch(e){}}
-function save(){try{localStorage.setItem("masrouf",JSON.stringify(S))}catch(e){}}
+var MK=(function(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)})(),VM=MK;
+var S={inc:0,items:[],fixed:[],skip:[],im:{},goal:{},cur:""};
+var K=[["سكن","n"],["أكل","n"],["مواصلات","n"],["فواتير","n"],["صحة","n"],["ترفيه","w"],["تسوق","w"],["ادخار","s"],["ديون","s"],["أخرى","w"]];
+var N={n:"أساسي",w:"كماليات",s:"ادخار وديون"};
+var CU=["","ر.س","د.إ","ج.م","د.ك","ر.ق","د.أ","د.م","د.ب","ر.ع","ل.ت","$","£","€","₹"];
+var MN=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 function $(i){return document.getElementById(i)}
 function f(n){return Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2})}
-var N={n:"أساسي",w:"كماليات",s:"ادخار وديون"};
-function render(){
-  var t={n:0,w:0,s:0},sum=0;
-  S.items.forEach(function(x){t[x.c]+=x.a;sum+=x.a});
-  var left=S.inc-sum;
-  $("left").textContent=f(left);$("s1").textContent=f(S.inc);$("s2").textContent=f(sum);
-  $("left").style.color=left<0?"var(--warn)":"inherit";
-  var p=S.inc>0?Math.min(100,sum/S.inc*100):0;
-  $("pb").style.width=p+"%";$("pb").className=sum>S.inc&&S.inc>0?"over":"";
-  $("pt").textContent=S.inc>0?"صرفت "+f(sum)+" من "+f(S.inc)+" ("+Math.round(sum/S.inc*100)+"٪)":"";
-  var g=(S.inc>0&&t.n>S.inc*.5)?{n:.6,w:.2,s:.2}:{n:.5,w:.3,s:.2},h="",dl=Math.max(1,new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate()-new Date().getDate()+1);
-  ["n","w","s"].forEach(function(k){
-    var tg=S.inc*g[k],rm=tg-t[k],pc=tg>0?Math.min(100,t[k]/tg*100):0;
-    h+='<div class="stat"><span>'+N[k]+' ('+Math.round(g[k]*100)+'٪)</span><span class="sm">'+f(t[k])+" / "+f(tg)+'</span></div><div class="bar"><i class="'+(tg>0&&t[k]>tg&&k!=="s"?"over":"")+'" style="width:'+pc+'%"></i></div><div class="sm">'+tip(k,rm,dl)+'</div>';
-  });
-  if(S.inc>0)h+=plan(g);$("rule").innerHTML=h;
-  var l="";
-  S.items.forEach(function(x,i){l+='<div class="item"><div>'+esc(x.n)+' <span class="tag">'+N[x.c]+'</span></div><div><b>'+f(x.a)+'</b> <button class="x" data-i="'+i+'" aria-label="حذف">×</button></div></div>'});
-  $("list").innerHTML=l||'<div class="sm">ما فيه مصاريف بعد.</div>';
-}
+function m(n){return f(n)+(S.cur?" "+S.cur:"")}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-$("inc").oninput=function(){S.inc=parseFloat(this.value)||0;save();render()};
+function save(){try{localStorage.setItem("masrouf",JSON.stringify(S))}catch(e){}}
+function load(){
+  try{var v=localStorage.getItem("masrouf");if(v){var o=JSON.parse(v);for(var k in o)S[k]=o[k]}}catch(e){}
+  S.items.forEach(function(x){if(!x.m)x.m=MK;if(x.c==null)x.c="n"});
+  S.fixed.forEach(function(x){if(S.skip.indexOf(x.id+MK)<0&&!S.items.some(function(i){return i.m===MK&&i.fx===x.id}))S.items.unshift({n:x.n,a:x.a,c:x.c,k:x.k,m:MK,fx:x.id})});
+  save();
+}
+function INC2(k){return S.im[k]!=null?S.im[k]:S.inc}
+function mt(k){return MN[+k.slice(5)-1]+" "+k.slice(0,4)}
+function mopts(){var ms={};ms[MK]=1;S.items.forEach(function(x){ms[x.m]=1});ms[VM]=1;$("mo").innerHTML=Object.keys(ms).sort().reverse().map(function(k){return'<option value="'+k+'">'+mt(k)+(k===MK?" (الحالي)":"")+'</option>'}).join("");$("mo").value=VM}
+function tip(k,rm,dl,sp,tg){
+  if(!tg)return"";
+  if(k==="s")return rm>0?"باقي عليك تدخر "+m(rm):"حققت هدف الادخار ✅";
+  if(rm<0)return"🔴 تجاوزت الحد بـ "+m(-rm);
+  return(sp>=tg*.8?"⚠️ اقتربت من الحد. ":"")+"متاح لك "+m(rm)+(dl?" (حوالي "+m(rm/dl)+" باليوم)":"");
+}
+function plan(g,inc){return '<p><span class="tag">خطوات عملية</span></p><ul><li>حوّل '+m(inc*g.s)+' للادخار أول ما ينزل الراتب، قبل أي صرف.</li><li>قسّم الادخار: 50٪ طوارئ (حتى تغطي 3 إلى 6 شهور)، 30٪ أهداف قريبة، 20٪ استثمار أو سداد ديون.</li>'+(g.n>.5?'<li>أساسياتك فوق 50٪ فتم ضبط التوزيع إلى 60/20/20، وحاول خفض الإيجار والفواتير تدريجياً.</li>':"")+'</ul>'}
+function proj(inc,sum,d){
+  if(VM!==MK||d.getDate()<5)return"";
+  var fx=0;S.items.forEach(function(x){if(x.m===VM&&x.fx)fx+=x.a});
+  var n=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(),p=fx+(sum-fx)/d.getDate()*n;
+  return" · بهذا المعدل تنهي الشهر بمصروف "+m(p)+(p>inc?" ⚠️ أعلى من دخلك":" ✅");
+}
+function goal(){
+  var g=S.goal||{},a=+g.a||0,sv=+g.s||0;
+  if(!a){$("gr").innerHTML='<div class="sm">اكتب المبلغ والتاريخ ونحسب لك كم تدخر شهرياً.</div>';return}
+  var rem=Math.max(0,a-sv),pc=Math.min(100,sv/a*100),h='<div class="bar"><i style="width:'+pc+'%"></i></div><div class="sm">'+(g.n?esc(g.n)+": ":"")+"تبقى "+m(rem)+" ("+Math.round(pc)+"٪ تحقق)</div>";
+  if(!rem)h+='<p class="win">وصلت للهدف 🎉</p>';
+  else if(g.d){var mn=Math.ceil((new Date(g.d)-new Date())/2592e6);h+=mn>0?'<p>ادخر <b>'+m(rem/mn)+'</b> شهرياً لمدة '+f(mn)+' شهر.</p>':'<p class="sm">التاريخ المستهدف فات أو قريب جداً، عدّله.</p>'}
+  $("gr").innerHTML=h;
+}
+function render(){
+  mopts();
+  var inc=INC2(VM),t={n:0,w:0,s:0},sum=0,by={},d=new Date(),dl=VM===MK?Math.max(1,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate()+1):0;
+  S.items.forEach(function(x){if(x.m!==VM)return;t[x.c]+=x.a;sum+=x.a;var q=x.k!=null?K[x.k][0]:N[x.c];by[q]=(by[q]||0)+x.a});
+  var left=inc-sum;
+  $("left").textContent=m(left);$("s1").textContent=m(inc);$("s2").textContent=m(sum);
+  $("left").style.color=left<0?"var(--warn)":"inherit";
+  var p=inc>0?Math.min(100,sum/inc*100):0;
+  $("pb").style.width=p+"%";$("pb").className=sum>inc&&inc>0?"over":"";
+  $("pt").textContent=inc>0?"صرفت "+m(sum)+" من "+m(inc)+" ("+Math.round(sum/inc*100)+"٪)"+proj(inc,sum,d):"";
+  var g=(inc>0&&t.n>inc*.5)?{n:.6,w:.2,s:.2}:{n:.5,w:.3,s:.2},h="";
+  ["n","w","s"].forEach(function(k){
+    var tg=inc*g[k],rm=tg-t[k],pc=tg>0?Math.min(100,t[k]/tg*100):0;
+    h+='<div class="stat"><span>'+N[k]+' ('+Math.round(g[k]*100)+'٪)</span><span class="sm">'+m(t[k])+" / "+m(tg)+'</span></div><div class="bar"><i class="'+(tg>0&&t[k]>tg&&k!=="s"?"over":"")+'" style="width:'+pc+'%"></i></div><div class="sm">'+tip(k,rm,dl,t[k],tg)+'</div>';
+  });
+  if(inc>0)h+=plan(g,inc);
+  $("rule").innerHTML=h;
+  var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
+  $("cats").innerHTML=ks.map(function(k){var q=sum?by[k]/sum*100:0;return'<div class="stat"><span>'+k+'</span><span class="sm">'+m(by[k])+" · "+Math.round(q)+'٪</span></div><div class="bar"><i style="width:'+q+'%"></i></div>'}).join("")||'<div class="sm">أضف مصاريف لترى أين تذهب فلوسك.</div>';
+  var l="",seen={},q2="";
+  S.items.forEach(function(x,i){
+    if(!x.fx&&!seen[x.n]&&Object.keys(seen).length<5){seen[x.n]=1;q2+='<button class="tag" data-q="'+i+'" style="border:0;cursor:pointer;font:inherit">'+esc(x.n)+'</button>'}
+    if(x.m!==VM)return;
+    l+='<div class="item"><div>'+esc(x.n)+' <span class="tag">'+(x.k!=null?K[x.k][0]:N[x.c])+'</span>'+(x.fx?' 🔁':'')+'</div><div><b>'+m(x.a)+'</b>'+(x.fx?'':' <button class="x" data-e="'+i+'" aria-label="تعديل">✎</button>')+' <button class="x" data-i="'+i+'" aria-label="حذف">×</button></div></div>';
+  });
+  $("qk").innerHTML=q2;
+  $("list").innerHTML=l||'<div class="sm">ما فيه مصاريف في هذا الشهر.</div>';
+  var hm={};S.items.forEach(function(x){hm[x.m]=(hm[x.m]||0)+x.a});
+  $("hist").innerHTML=Object.keys(hm).sort().reverse().map(function(k){var i=INC2(k);return'<div class="item"><div>'+mt(k)+'</div><div><b>'+m(hm[k])+'</b>'+(i?' <span class="sm">من '+m(i)+'</span>':'')+'</div></div>'}).join("")||'<div class="sm">لا يوجد سجل بعد.</div>';
+  goal();
+}
+$("inc").oninput=function(){var v=parseFloat(this.value)||0;S.im[VM]=v;if(VM===MK)S.inc=v;save();render()};
+$("mo").onchange=function(){VM=this.value;$("inc").value=INC2(VM)||"";render()};
+$("cur").onchange=function(){S.cur=this.value;save();render()};
 $("add").onclick=function(){
   var a=parseFloat($("am").value);if(!a||a<=0)return;
-  S.items.unshift({n:$("nm").value.trim()||"مصروف",a:a,c:$("ct").value});
-  $("nm").value="";$("am").value="";save();render();
+  var k=+$("ct").value,x={n:$("nm").value.trim()||K[k][0],a:a,c:K[k][1],k:k,m:VM};
+  if($("fx").checked){x.fx=Date.now();S.fixed.push({id:x.fx,n:x.n,a:a,c:x.c,k:k})}
+  S.items.unshift(x);$("nm").value="";$("am").value="";$("fx").checked=false;save();render();
 };
-$("list").onclick=function(e){var i=e.target.getAttribute("data-i");if(i!==null){S.items.splice(+i,1);save();render()}};
+$("qk").onclick=function(e){var q=e.target.getAttribute("data-q");if(q===null)return;var x=S.items[+q];$("nm").value=x.n;$("am").value=x.a;$("ct").value=x.k!=null?x.k:({n:0,w:9,s:7})[x.c];$("am").focus()};
+$("list").onclick=function(e){
+  var el=e.target,i=el.getAttribute("data-i"),ed=el.getAttribute("data-e");
+  if(ed!==null){var x=S.items.splice(+ed,1)[0];$("nm").value=x.n;$("am").value=x.a;$("ct").value=x.k!=null?x.k:({n:0,w:9,s:7})[x.c];save();render();$("nm").focus();return}
+  if(i!==null){var y=S.items[+i];if(y.fx){if(confirm("هذا مصروف متكرر. حذفه من الشهور القادمة أيضاً؟"))S.fixed=S.fixed.filter(function(z){return z.id!==y.fx});else S.skip.push(y.fx+VM)}S.items.splice(+i,1);save();render()}
+};
+["gn","ga","gs","gd"].forEach(function(i){$(i).oninput=function(){S.goal={n:$("gn").value,a:$("ga").value,s:$("gs").value,d:$("gd").value};save();goal()}});
+function cp2(j){var no=function(){$("bk").select();$("bm").textContent="حدد النص وانسخه يدوياً"};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(j).then(function(){$("bm").textContent="تم النسخ ✅ احفظه في ملاحظاتك"},no);else no()}
+$("ex").onclick=function(){var j=JSON.stringify(S);$("bk").value=j;cp2(j)};
+$("im").onclick=function(){try{var o=JSON.parse($("bk").value);if(!o||!Array.isArray(o.items))throw 0;if(!confirm("سيتم استبدال بياناتك الحالية. متابعة؟"))return;S=Object.assign({inc:0,items:[],fixed:[],skip:[],im:{},goal:{},cur:""},o);save();init();$("bm").textContent="تم الاستيراد ✅"}catch(e){$("bm").textContent="النص غير صالح"}};
+function init(){
+  load();VM=MK;
+  $("cur").innerHTML=CU.map(function(c){return'<option value="'+c+'">'+(c||"بدون")+'</option>'}).join("");$("cur").value=S.cur||"";
+  $("ct").innerHTML=K.map(function(c,i){return'<option value="'+i+'">'+c[0]+'</option>'}).join("");
+  var g=S.goal||{};$("gn").value=g.n||"";$("ga").value=g.a||"";$("gs").value=g.s||"";$("gd").value=g.d||"";
+  $("inc").value=INC2(VM)||"";render();
+}
 document.querySelector(".tabs").onclick=function(e){
   var t=e.target.getAttribute("data-t");if(!t)return;
   ["a","b","c"].forEach(function(k){$(k).classList.toggle("hide",k!==t)});
@@ -217,8 +297,6 @@ var R=[
 ["شركات الحوالات والصرافة المرخصة (مثل Western Union وMoneyGram)","استلام نقدي وتغطية واسعة، وسعر الصرف أقل جاذبية غالباً.","دقائق غالباً","مناسبة لمن لا يملك حساباً بنكياً"],
 ["الحوالة البنكية (SWIFT)","رسوم ثابتة وقد تُخصم رسوم بنوك وسيطة.","1 إلى 5 أيام عمل","الأفضل للمبالغ الكبيرة والأغراض الموثقة"]
 ];
-function tip(k,rm,dl){if(!S.inc)return "";if(k==="s")return rm>0?"باقي عليك تدخر "+f(rm):"حققت هدف الادخار ✅";return rm>=0?"متاح لك "+f(rm)+" (حوالي "+f(rm/dl)+" باليوم)":"تجاوزت الحد بـ "+f(-rm)}
-function plan(g){return '<p><span class="tag">خطوات عملية</span></p><ul><li>حوّل '+f(S.inc*g.s)+' للادخار أول ما ينزل الراتب، قبل أي صرف.</li><li>قسّم الادخار: 50٪ طوارئ (حتى تغطي 3 إلى 6 شهور)، 30٪ أهداف قريبة، 20٪ استثمار أو سداد ديون.</li>'+(g.n>.5?'<li>أساسياتك فوق 50٪ فتم ضبط التوزيع إلى 60/20/20، وحاول خفض الإيجار والفواتير تدريجياً.</li>':"")+'</ul>'}
 function tags(b){var d=b[0]+b[1],t=[];if(/إسلامي/.test(d))t.push("إسلامي");if(/حكومي/.test(d))t.push("حكومي");if(/رقمي|Neo|محافظ/.test(d))t.push("رقمي");if(/دولي|دولية/.test(d))t.push("دولي");return t.map(function(x){return '<span class="tag">'+x+'</span> '}).join("")||'<span class="sm">عام</span>'}
 function bsel(){var c=X(+$("wc").value),o=c[3].map(function(b,i){return '<option value="'+i+'">'+b[0]+'</option>'}).join("");$("b1").innerHTML=o;$("b2").innerHTML=o;if(c[3].length>1)$("b2").value="1"}
 function kc(c){if(!c[3].length)return '<p class="sm">اختر بلداً من القائمة لمقارنة بنوكه.</p>';var a=c[3][+$("b1").value],b=c[3][+$("b2").value];return '<div class="row">'+[a,b].map(function(x){return '<div class="mini" style="text-align:right"><b>'+x[0]+'</b><div style="margin:6px 0">'+tags(x)+'</div><span style="font-size:13px">'+x[1]+'</span></div>'}).join("")+'</div><ul><li>اسأل كل بنك عن: رسوم الحساب والبطاقة، سعر الصرف، رسوم التحويل الدولي، والحد اليومي.</li><li>الإسلامي لمن يريد تعاملات بلا فوائد، والرقمي لمن يريد فتح حساب سريع ورسوماً أقل غالباً.</li></ul>'}
@@ -243,7 +321,7 @@ opts($("wc"));opts($("wd"));$("wd").value="1";bsel();
 $("wc").onchange=function(){bsel();wr()};$("wd").onchange=wr;$("wp").onchange=wr;$("b1").onchange=wr;$("b2").onchange=wr;
 $("wt").onclick=function(e){var w=e.target.getAttribute("data-w");if(!w)return;document.querySelectorAll("#wt button").forEach(function(b){b.classList.toggle("on",b===e.target)});wr()};
 wr();
-load();$("inc").value=S.inc||"";render();
+init();
 </script>
 </body>
 </html>
