@@ -128,17 +128,15 @@ details.card summary{font-weight:700;cursor:pointer}details.card[open] summary{m
 
 <section id="c" class="hide">
   <div class="card">
-    <h2>قارن بين خيارين للتحويل</h2>
-    <label>المبلغ</label><input id="ta" type="number" inputmode="decimal" placeholder="1000">
-    <div class="row">
-      <div><label>الخيار 1: الرسوم</label><input id="f1" type="number" inputmode="decimal" placeholder="10"></div>
-      <div><label>سعر الصرف 1</label><input id="r1" type="number" inputmode="decimal" step="any" placeholder="3.75"></div>
-    </div>
-    <div class="row">
-      <div><label>الخيار 2: الرسوم</label><input id="f2" type="number" inputmode="decimal" placeholder="0"></div>
-      <div><label>سعر الصرف 2</label><input id="r2" type="number" inputmode="decimal" step="any" placeholder="3.70"></div>
-    </div>
-    <div id="cmp" class="sm" style="margin-top:12px">عبّي الأرقام ونعرف أي خيار يوصّل لك أكثر.</div>
+    <h2>قارن خيارات التحويل</h2>
+    <p class="sm">الرسوم وحدها تخدعك، والأهم المبلغ الذي يصل فعلاً. اكتب مبلغك وسعر السوق الحقيقي (ابحث عنه في Google) وأرقام كل خيار.</p>
+    <div class="row"><div><label>المبلغ المُرسل</label><input id="ta" type="number" inputmode="decimal"></div><div><label>سعر السوق الحقيقي</label><input id="tm" type="number" inputmode="decimal" step="any"></div></div>
+    <div id="tx"></div><div id="tr" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2>قارن تكلفة البنوك سنوياً</h2>
+    <label>كم تحويلاً تعمل بالشهر؟</label><input id="bn" type="number" inputmode="numeric" value="2">
+    <div id="bx"></div><div id="br" style="margin-top:12px"></div>
   </div>
 </section>
 </main>
@@ -246,13 +244,26 @@ document.querySelector(".tabs").onclick=function(e){
   ["a","b","c"].forEach(function(k){$(k).classList.toggle("hide",k!==t)});
   document.querySelectorAll(".tabs button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-t")===t)});
 };
+var TN=["الخيار الأول","الخيار الثاني","الخيار الثالث"],BN=["البنك الأول","البنك الثاني","البنك الثالث"];
+function box(a,b,fl){return '<div class="mini" style="text-align:right;margin-top:8px"><input id="'+a+'" placeholder="'+b+'">'+fl+'</div>'}
+function fld(id,l,st){return '<div><label>'+l+'</label><input id="'+id+'" type="number" inputmode="decimal"'+(st?' step="any"':'')+'></div>'}
+$("tx").innerHTML=TN.map(function(n,i){return box("tn"+i,n+" (بنك، صرافة، تطبيق...)",'<div class="row">'+fld("tf"+i,"الرسوم")+fld("tg"+i,"سعر الصرف",1)+'</div>')}).join("");
+$("bx").innerHTML=BN.map(function(n,i){return box("bz"+i,n,'<div class="row">'+fld("bf"+i,"رسوم الحساب شهرياً")+fld("bc"+i,"رسوم البطاقة سنوياً")+'</div>'+fld("bt"+i,"رسوم التحويل الواحد"))}).join("");
 function cmp(){
-  var a=parseFloat($("ta").value),f1=parseFloat($("f1").value)||0,f2=parseFloat($("f2").value)||0,r1=parseFloat($("r1").value),r2=parseFloat($("r2").value);
-  if(!a||!r1||!r2)return;
-  var o1=(a-f1)*r1,o2=(a-f2)*r2,d=Math.abs(o1-o2),w=o1===o2?0:(o1>o2?1:2);
-  $("cmp").innerHTML="الخيار 1 يوصّل: <b>"+f(o1)+"</b><br>الخيار 2 يوصّل: <b>"+f(o2)+"</b><br>"+(w?'<span class="win">الخيار '+w+" أفضل بفرق "+f(d)+"</span>":"النتيجة متساوية");
+  var a=parseFloat($("ta").value),mk=parseFloat($("tm").value),o=[];
+  for(var i=0;i<3;i++){var fe=parseFloat($("tf"+i).value)||0,r=parseFloat($("tg"+i).value);if(a&&r)o.push({n:$("tn"+i).value||TN[i],g:(a-fe)*r,fe:fe})}
+  if(!o.length){$("tr").innerHTML='<span class="sm">اكتب المبلغ وسعر الصرف لخيار واحد على الأقل.</span>';return}
+  o.sort(function(x,y){return y.g-x.g});
+  $("tr").innerHTML=o.map(function(x,i){var c=mk?(1-x.g/(a*mk))*100:null;return '<div class="item"><div><b>'+(i?"":"⭐ ")+esc(x.n)+'</b><div class="sm">رسوم '+f(x.fe)+(c!=null?" · التكلفة الفعلية "+f(c)+"٪":"")+(i?" · أقل بـ "+f(o[0].g-x.g):"")+'</div></div><div><b class="'+(i?"":"win")+'">'+f(x.g)+'</b></div></div>'}).join("")+(o.length>1?'<p class="win">الأفضل يوصّل لك زيادة '+f(o[0].g-o[o.length-1].g)+' عن الأسوأ.</p>':"")+(mk?"":'<p class="sm">أضف سعر السوق لنحسب التكلفة الفعلية (الرسوم + هامش سعر الصرف).</p>');
 }
-["ta","f1","f2","r1","r2"].forEach(function(i){$(i).oninput=cmp});
+function bcmp(){
+  var n=parseFloat($("bn").value)||0,o=[];
+  for(var i=0;i<3;i++){var v=["bf","bc","bt"].map(function(k){return parseFloat($(k+i).value)||0});if(v[0]||v[1]||v[2]||$("bz"+i).value)o.push({n:$("bz"+i).value||BN[i],y:v[0]*12+v[1]+v[2]*n*12})}
+  if(!o.length){$("br").innerHTML='<span class="sm">اكتب رسوم بنك واحد على الأقل.</span>';return}
+  o.sort(function(x,y){return x.y-y.y});
+  $("br").innerHTML=o.map(function(x,i){return '<div class="item"><div><b>'+(i?"":"⭐ ")+esc(x.n)+'</b><div class="sm">شهرياً '+f(x.y/12)+'</div></div><div><b class="'+(i?"":"win")+'">'+f(x.y)+'</b> <span class="sm">سنوياً</span></div></div>'}).join("")+(o.length>1?'<p class="win">الأرخص يوفر عليك '+f(o[o.length-1].y-o[0].y)+' سنوياً.</p>':"");
+}
+$("tx").oninput=cmp;$("ta").oninput=cmp;$("tm").oninput=cmp;$("bx").oninput=bcmp;$("bn").oninput=bcmp;cmp();bcmp();
 function fb(s){
   var t=document.createElement("textarea");t.value=s;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();
   var r=false;try{r=document.execCommand("copy")}catch(e){}
@@ -289,8 +300,16 @@ var W=[
 ["الهند","UPI","«UPI» للتحويل الفوري من الجوال، وNEFT وIMPS وRTGS للتحويلات الأخرى.",[["SBI","أكبر بنك حكومي وانتشار هائل."],["HDFC","أكبر بنك خاص وخدمات رقمية قوية."],["ICICI","تطبيق قوي وخدمات متنوعة."],["Axis","خدمات أفراد وشركات."]]],
 ["باكستان","راست","نظام «راست (Raast)» للتحويل الفوري بين البنوك والمحافظ.",[["HBL","من أكبر البنوك وانتشار واسع."],["UBL","خدمات أفراد وتحويلات دولية."],["MCB","فروع كثيرة وخدمات متنوعة."],["Meezan","أكبر بنك إسلامي."]]],
 ["الفلبين","InstaPay","«InstaPay» للتحويل الفوري، وPESONet للتحويلات المجمّعة، ومحافظ مثل GCash وMaya.",[["BDO","أكبر بنك وانتشار واسع."],["BPI","خدمات رقمية قوية."],["Metrobank","خدمات أفراد وشركات."],["GCash / Maya","محافظ إلكترونية شائعة جداً."]]],
-["منطقة اليورو","SEPA","نظام SEPA (وSEPA الفوري) للتحويل باليورو بين دول المنطقة غالباً برسوم منخفضة.",[["Deutsche Bank","أكبر بنك ألماني."],["BNP Paribas","من أكبر البنوك الأوروبية."],["Santander","حضور واسع في أوروبا."],["ING","بنك رقمي قوي."]]]
+["منطقة اليورو","SEPA","نظام SEPA (وSEPA الفوري) للتحويل باليورو بين دول المنطقة غالباً برسوم منخفضة.",[["Deutsche Bank","أكبر بنك ألماني."],["BNP Paribas","من أكبر البنوك الأوروبية."],["Santander","حضور واسع في أوروبا."],["ING","بنك رقمي قوي."]]],
+["عُمان","تطبيق البنك","التحويل المحلي بالآيبان من تطبيق البنك.",[["بنك مسقط","أكبر بنك عُماني وانتشار واسع."],["بنك ظفار","خدمات أفراد وشركات وتطبيق جيد."],["البنك الوطني العماني","خدمات أفراد وشركات."],["صحار الدولي","خدمات أفراد وشركات."]]],
+["البحرين","فوري+","«فوري+» للتحويل الفوري بين البنوك، وتطبيق «بنفت باي» للتحويل والدفع.",[["بنك البحرين الوطني","من أكبر البنوك وانتشار واسع."],["بنك البحرين والكويت","خدمات أفراد وشركات وتطبيق جيد."],["بيت التمويل الكويتي - البحرين","بنك إسلامي."],["بنك السلام","بنك إسلامي بخدمات أفراد."]]],
+["تونس","RIB","التحويل المحلي برقم الحساب (RIB) من تطبيق البنك أو الفرع.",[["BIAT","من أكبر البنوك الخاصة."],["الشركة التونسية للبنك (STB)","بنك حكومي بشبكة فروع واسعة."],["أمين بنك","خدمات أفراد وشركات."],["التجاري بنك","خدمات أفراد وانتشار واسع."]]],
+["الجزائر","RIP","التحويل المحلي برقم الحساب (RIB/RIP) وتطبيق «بريدي موب» لعملاء بريد الجزائر.",[["بريد الجزائر","أكبر قاعدة عملاء عبر الحسابات البريدية."],["بنك الجزائر الخارجي (BEA)","بنك حكومي لخدمات الأفراد والتجارة."],["البنك الوطني الجزائري (BNA)","بنك حكومي بفروع واسعة."],["بنك الفلاحة والتنمية الريفية (BADR)","بنك حكومي بشبكة فروع واسعة."]]],
+["السودان","بنكك","تطبيق «بنكك» من بنك الخرطوم للتحويل الفوري، وتطبيقات بنوك أخرى مشابهة.",[["بنك الخرطوم","من أكبر بنوك السودان وتطبيق «بنكك» الشائع."],["بنك فيصل الإسلامي","بنك إسلامي."],["بنك أم درمان الوطني","خدمات أفراد وشركات."]]],
+["كندا","Interac","Interac e-Transfer للتحويل بين الأفراد بسرعة عبر الإيميل أو الجوال.",[["RBC","أكبر بنك كندي."],["TD","خدمات أفراد وتطبيق قوي."],["Scotiabank","حضور دولي."],["BMO","خدمات أفراد وشركات."]]]
 ];
+var P={"السعودية":"STC Pay، Urpay، إنجاز (الراجحي)، Western Union","الإمارات":"العنسري، لولو للصرافة، Botim Money، Wise","مصر":"إنستاباي، Fawry، Western Union عبر البنوك","الكويت":"المُلّا للصرافة، تطبيقات البنوك، Western Union","قطر":"الفردان للصرافة، Doha Exchange، Western Union","الأردن":"كليك CliQ، Orange Money، Zain Cash","المغرب":"Wafacash، Cash Plus، Western Union","العراق":"زين كاش، كي كارد (Qi Card)، Western Union","تركيا":"Papara، Wise، Western Union، PTT","أمريكا":"Wise، Remitly، Xoom، Western Union","بريطانيا":"Wise، Revolut، Remitly، WorldRemit","الهند":"UPI، Wise، Remitly، Xoom","باكستان":"إيزي بيسا، جاز كاش، Western Union","الفلبين":"GCash، Maya، Remitly","منطقة اليورو":"Wise، Revolut، Remitly","عُمان":"مراكز الصرافة المرخصة، Western Union","البحرين":"بنفت باي، مراكز الصرافة المرخصة، Western Union","تونس":"Western Union، MoneyGram، مكاتب البريد","الجزائر":"بريدي موب، Western Union، مكاتب البريد","السودان":"بنكك، Western Union","كندا":"Wise، Remitly، Interac e-Transfer"};
+function pv(c,t){var v=P[c[0]];return v?'<h2 style="margin-top:14px">حوالات وتطبيقات شائعة '+t+'</h2><p class="sm" style="margin:0">'+v+'. تأكد من توفرها وترخيصها قبل الاستخدام.</p>':""}
 var OT=["دولة أخرى","حسابه البنكي","استخدم تطبيق بنكك أو نظام الدفع الفوري في بلدك، وقارن الرسوم والمدة.",[]];
 var R=[
 ["تطبيقات التحويل الدولي (مثل Wise وRemitly)","سعر صرف غالباً قريب من السوق ورسوم معلنة قبل التأكيد.","دقائق إلى يومين","مناسبة للمبالغ الصغيرة والمتوسطة"],
@@ -307,13 +326,13 @@ function wr(){
   var c=X(+$("wc").value),d=X(+$("wd").value),m=document.querySelector("#wt .on").getAttribute("data-w"),h="";
   $("wdw").classList.toggle("hide",m!=="g");$("wpw").classList.toggle("hide",m!=="g");$("wbw").classList.toggle("hide",m!=="k");
   if(m==="l"){
-    h='<p><span class="tag">التحويل المحلي في '+c[0]+'</span></p><p>'+c[2]+'</p><ul><li>تأكد من الآيبان واسم المستفيد قبل التأكيد.</li><li>قارن رسوم بنكك مع بنوك أخرى فقد تختلف.</li><li>للمبالغ الكبيرة تحقق من حد التحويل اليومي.</li></ul>'+bk(c);
+    h='<p><span class="tag">التحويل المحلي في '+c[0]+'</span></p><p>'+c[2]+'</p><ul><li>تأكد من الآيبان واسم المستفيد قبل التأكيد.</li><li>قارن رسوم بنكك مع بنوك أخرى فقد تختلف.</li><li>للمبالغ الكبيرة تحقق من حد التحويل اليومي.</li></ul>'+pv(c,"في "+c[0])+bk(c);
   }else if(m==="k"){h=kc(c);}else if(c===d&&c!==OT){
     h='<p>البلد نفسه، فاستخدم <b>التحويل المحلي</b> (الزر الأول)، فهو الأسرع والأرخص.</p>';
   }else{
     h='<p><span class="tag">من '+c[0]+' إلى '+d[0]+'</span></p><p class="sm">مرتبة حسب الأهم عندك، والأول هو الأنسب:</p>';
     ({c:[0,2,1],f:[0,1,2],k:[1,0,2],b:[2,0,1]})[$("wp").value].map(function(j){return R[j]}).forEach(function(r,i){h+='<div class="item"><div><b>'+(i+1)+'. '+r[0]+'</b><div class="sm">'+r[1]+'</div><div class="sm">⏱ '+r[2]+' | '+r[3]+'</div></div></div>'});
-    h+='<ul><li>المستفيد في '+d[0]+' يستلم عادةً في '+d[1]+'.</li><li>قارن سعر الصرف الفعلي مع سعر السوق، لا الرسوم فقط (تبويب «قارن»).</li><li>جرّب بمبلغ صغير أولاً وتأكد أن الجهة مرخصة.</li></ul>'+bk(c);
+    h+='<h2 style="margin-top:14px">قبل ما تحوّل</h2><ul><li>جهّز: اسم المستفيد كما في هويته، رقم الحساب أو الآيبان ورمز SWIFT، وغرض التحويل.</li><li>المستفيد في '+d[0]+' يستلم عادةً في '+d[1]+'، وتأكد أن حسابه يقبل عملة الاستلام.</li><li>اطلب عرض سعر <b>إجمالي</b> (الرسوم + سعر الصرف) وقارنه في تبويب «قارن».</li><li>للمبالغ الكبيرة قد يُطلب إثبات مصدر المال، فاحتفظ بالمستندات.</li><li>جرّب مبلغاً صغيراً أولاً، واحفظ إيصال التحويل ورقم التتبع.</li><li>احذر: لا تحوّل لشخص لا تعرفه، ولا تعطِ أحداً رمز التحقق.</li></ul>'+pv(c,"في بلدك")+pv(d,"للاستلام في "+d[0])+bk(c);
   }
   $("wr").innerHTML=h+'<p class="sm" style="margin-top:10px">المعلومات عامة وقد تتغير، تأكد من موقع الجهة قبل التحويل. وأنا لست مستشاراً مالياً.</p>';
 }
