@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>منظم المصروف</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1411">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0e1411;--card:#171f1b;--tx:#e8efea;--mut:#92a199;--pri:#4cc79b;--pri2:#1f3329;--bd:#27342d;--warn:#ff7b6b;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -95,7 +100,9 @@ details.card summary{font-weight:700;cursor:pointer}details.card[open] summary{m
   </details>
   <div class="card">
     <button class="btn" id="shL" style="margin-top:0">شارك</button>
+    <button class="btn hide" id="ins" style="background:var(--pri2);color:var(--pri)">📲 ثبّت التطبيق على جوالك</button>
     <div class="sm" id="shM" style="margin-top:8px;text-align:center"></div>
+    <p class="sm" style="margin:8px 0 0;text-align:center">للتثبيت: آيفون من Safari اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية». أندرويد من زر التثبيت أو قائمة المتصفح.</p>
   </div>
 </section>
 
@@ -131,6 +138,10 @@ details.card summary{font-weight:700;cursor:pointer}details.card[open] summary{m
     <h2>قارن خيارات التحويل</h2>
     <p class="sm">الرسوم وحدها تخدعك، والأهم المبلغ الذي يصل فعلاً. اكتب مبلغك وسعر السوق الحقيقي (ابحث عنه في Google) وأرقام كل خيار.</p>
     <div class="row"><div><label>المبلغ المُرسل</label><input id="ta" type="number" inputmode="decimal"></div><div><label>سعر السوق الحقيقي</label><input id="tm" type="number" inputmode="decimal" step="any"></div></div>
+    <div class="row" style="margin-top:8px"><div><label>من عملة</label><select id="fa"></select></div><div><label>إلى عملة</label><select id="fb"></select></div></div>
+    <button class="btn" id="fxb" style="background:var(--pri2);color:var(--pri);margin-top:8px">🔄 جلب سعر السوق</button>
+    <div class="sm" id="fm" style="margin-top:6px"></div>
+    <div class="sm">سعر وسطي يتحدث يومياً (المصدر: <a href="https://www.exchangerate-api.com" style="color:var(--pri)">ExchangeRate-API</a>)، وليس ما يعطيك إياه البنك.</div>
     <div id="tx"></div><div id="tr" style="margin-top:12px"></div>
   </div>
   <div class="card">
@@ -244,6 +255,23 @@ document.querySelector(".tabs").onclick=function(e){
   ["a","b","c"].forEach(function(k){$(k).classList.toggle("hide",k!==t)});
   document.querySelectorAll(".tabs button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-t")===t)});
 };
+var FX=[["SAR","ريال سعودي"],["AED","درهم إماراتي"],["EGP","جنيه مصري"],["KWD","دينار كويتي"],["QAR","ريال قطري"],["JOD","دينار أردني"],["MAD","درهم مغربي"],["BHD","دينار بحريني"],["OMR","ريال عماني"],["TND","دينار تونسي"],["DZD","دينار جزائري"],["IQD","دينار عراقي"],["SDG","جنيه سوداني"],["TRY","ليرة تركية"],["USD","دولار أمريكي"],["GBP","جنيه إسترليني"],["EUR","يورو"],["INR","روبية هندية"],["PKR","روبية باكستانية"],["PHP","بيزو فلبيني"],["CAD","دولار كندي"]];
+var fo=FX.map(function(c){return'<option value="'+c[0]+'">'+c[1]+" ("+c[0]+")</option>"}).join("");
+$("fa").innerHTML=fo;$("fb").innerHTML=fo;$("fa").value="SAR";$("fb").value="EGP";
+$("fxb").onclick=function(){
+  var a=$("fa").value,b=$("fb").value,mm=$("fm");
+  if(a===b){mm.textContent="اختر عملتين مختلفتين";return}
+  mm.textContent="جاري الجلب...";
+  fetch("https://open.er-api.com/v6/latest/"+a).then(function(r){return r.json()}).then(function(d){
+    if(!d||!d.rates||!d.rates[b])throw 0;
+    var v=+d.rates[b].toPrecision(6);$("tm").value=v;cmp();
+    mm.textContent="1 "+a+" = "+f(v)+" "+b+(d.time_last_update_utc?" · تحديث: "+d.time_last_update_utc.slice(0,16):"")+" ✅";
+  }).catch(function(){mm.textContent="تعذر الجلب (قد لا يعمل داخل المعاينة)، اكتب السعر يدوياً من Google."});
+};
+var dp=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e;$("ins").classList.remove("hide")});
+$("ins").onclick=function(){if(!dp)return;dp.prompt();dp.userChoice.then(function(){dp=null;$("ins").classList.add("hide")})};
+try{if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)&&window.top===window)navigator.serviceWorker.register("sw.js").catch(function(){})}catch(e){}
 var TN=["الخيار الأول","الخيار الثاني","الخيار الثالث"],BN=["البنك الأول","البنك الثاني","البنك الثالث"];
 function box(a,b,fl){return '<div class="mini" style="text-align:right;margin-top:8px"><input id="'+a+'" placeholder="'+b+'">'+fl+'</div>'}
 function fld(id,l,st){return '<div><label>'+l+'</label><input id="'+id+'" type="number" inputmode="decimal"'+(st?' step="any"':'')+'></div>'}
